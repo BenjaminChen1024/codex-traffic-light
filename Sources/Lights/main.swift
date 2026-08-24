@@ -300,6 +300,19 @@ struct ContentView: View {
                 }
             }
             Menu("Green Light Alert") {
+                Menu("Alert Speed") {
+                    ForEach(GreenAlertSpeed.allCases, id: \.rawValue) { opt in
+                        Button {
+                            alertSpeed = opt
+                        } label: {
+                            HStack {
+                                Text(opt.label)
+                                if alertSpeed == opt { Spacer(); Image(systemName: "checkmark") }
+                            }
+                        }
+                    }
+                }
+                Divider()
                 ForEach(GreenLightAlert.allCases, id: \.rawValue) { opt in
                     Button {
                         greenAlert = opt
@@ -307,18 +320,6 @@ struct ContentView: View {
                         HStack {
                             Text(opt.label)
                             if greenAlert == opt { Spacer(); Image(systemName: "checkmark") }
-                        }
-                    }
-                }
-            }
-            Menu("Alert Speed") {
-                ForEach(GreenAlertSpeed.allCases, id: \.rawValue) { opt in
-                    Button {
-                        alertSpeed = opt
-                    } label: {
-                        HStack {
-                            Text(opt.label)
-                            if alertSpeed == opt { Spacer(); Image(systemName: "checkmark") }
                         }
                     }
                 }

@@ -131,16 +131,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
         let alertItem = NSMenuItem(title: "Green Light Alert", action: nil, keyEquivalent: "")
         let alertMenu = NSMenu()
-        for opt in GreenLightAlert.allCases {
-            let m = NSMenuItem(title: opt.label, action: #selector(actionSetGreenAlert(_:)), keyEquivalent: "")
-            m.target = self
-            m.representedObject = opt.rawValue
-            m.state = opt == currentGreenAlert ? .on : .off
-            alertMenu.addItem(m)
-        }
-        alertItem.submenu = alertMenu
-        menu.addItem(alertItem)
-
         let speedItem = NSMenuItem(title: "Alert Speed", action: nil, keyEquivalent: "")
         let speedMenu = NSMenu()
         for opt in GreenAlertSpeed.allCases {
@@ -151,7 +141,17 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             speedMenu.addItem(m)
         }
         speedItem.submenu = speedMenu
-        menu.addItem(speedItem)
+        alertMenu.addItem(speedItem)
+        alertMenu.addItem(.separator())
+        for opt in GreenLightAlert.allCases {
+            let m = NSMenuItem(title: opt.label, action: #selector(actionSetGreenAlert(_:)), keyEquivalent: "")
+            m.target = self
+            m.representedObject = opt.rawValue
+            m.state = opt == currentGreenAlert ? .on : .off
+            alertMenu.addItem(m)
+        }
+        alertItem.submenu = alertMenu
+        menu.addItem(alertItem)
 
         menu.addItem(.separator())
         menu.addItem(item("Quit Lights", #selector(actionQuit), key: "q"))
