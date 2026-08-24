@@ -210,7 +210,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
                 x = (size.width - dotD) / 2
                 y = size.height - 3.5 - dotD - CGFloat(i) * (dotD + spacing)
             } else {
-                x = 1.0 + CGFloat(i) * (dotD + spacing)
+                let totalWidth = 3 * dotD + 2 * spacing
+                x = (size.width - totalWidth) / 2 + CGFloat(i) * (dotD + spacing)
                 y = (size.height - dotD) / 2
             }
             if isActive {
