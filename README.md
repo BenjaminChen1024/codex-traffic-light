@@ -1,49 +1,51 @@
 # Codex Traffic Light
 
-适用于 **Codex Desktop** 的 macOS 交通灯状态提示器。它把 Codex 的工作状态显示在菜单栏与可拖动的悬浮灯中，让你无需一直盯着对话窗口。
+[简体中文](README_ZH.md)
 
-![Codex Traffic Light 演示](docs/demo.gif)
+A macOS traffic-light status indicator for **Codex Desktop**. It shows Codex activity in the menu bar and an optional draggable floating light, so you do not have to keep watching the conversation window.
 
-## 状态
+![Codex Traffic Light demo](docs/demo.gif)
 
-| 灯色 | Codex 状态 |
+## Status mapping
+
+| Light | Codex status |
 | --- | --- |
-| 🔴 红灯 | 正在思考、执行命令或编辑文件 |
-| 🟡 黄灯 | 正在等待你回答问题，或等待退出计划模式 |
-| 🟢 绿灯 | 当前任务已停止或完成 |
+| 🔴 Red | Thinking, running a command, or editing files |
+| 🟡 Yellow | Waiting for your answer, or waiting to exit plan mode |
+| 🟢 Green | The current task has stopped or completed |
 
-状态只通过本机 `127.0.0.1` 的 Hooks 传递；Lights 不读取聊天内容，也不会把状态发送到外部网络。
+Status is delivered only through local `127.0.0.1` hooks. Lights never reads your conversations or sends status data over the network.
 
-## 功能
+## Features
 
-- 常驻菜单栏交通灯，可选显示桌面悬浮灯。
-- 悬浮灯支持拖动、横向/纵向布局，以及独立的 5 档大小。
-- 状态栏交通灯也有独立的 5 档大小与黑色/透明背景。
-- 任务完成后，绿灯可设置不闪烁、闪 1/3/5/10 次，并可调节闪烁速度。
-- 菜单和配置面板支持中文、English。
-- `Setup Hooks…` 中提供 Codex Desktop 一键配置：自动备份并写入所需 Hooks，完成后明确提示重启 Codex。
-- 支持“登录时启动 Lights”。
+- Persistent menu-bar traffic light, with an optional floating light.
+- The floating light is draggable, supports horizontal and vertical layouts, and has five independent size levels.
+- The menu-bar indicator has its own five size levels and black or transparent background.
+- On completion, the green light can stay steady or flash 1, 3, 5, or 10 times; choose a 0.3, 0.5, 0.8, 1.2, or 1.6 second flash interval.
+- English and Simplified Chinese interfaces.
+- One-click **Codex Desktop** setup in `Setup Hooks…`: backs up and writes the required hooks, then clearly asks you to restart Codex.
+- Launch Lights automatically at login.
 
-## 使用
+## Getting started
 
-1. 打开 `Lights.app`。
-2. 点击菜单栏图标或右键悬浮灯，选择 `Setup Hooks…`。
-3. 在 **Codex Desktop** 一栏点击 `Configure / 配置`。
-4. 看到“已配置，请重启 Codex 生效”后，重启 Codex Desktop 并信任 Hooks。
+1. Open `Lights.app`.
+2. Click the menu-bar icon, or right-click the floating light, then select `Setup Hooks…`.
+3. In **Codex Desktop**, select `Configure / 配置`.
+4. After the confirmation appears, restart Codex Desktop and trust the hooks.
 
-常用设置在菜单中可直接调整：
+Common settings are available directly from the menu:
 
 - `Show Light / 显示悬浮灯`
-- `Size / 大小` → 分别设置悬浮灯和状态栏
+- `Size / 大小` — configure floating and menu-bar lights separately
 - `Layout / 布局`
 - `Status Bar Background / 状态栏背景`
 - `Green Light Alert / 绿灯提醒`
 - `Launch Lights at Login / 登录时启动 Lights`
 - `Language / 语言`
 
-## 本地构建
+## Build locally
 
-环境要求：macOS 14+、Swift 5.9+ 与 Xcode Command Line Tools。
+Requirements: macOS 14+, Swift 5.9+, and Xcode Command Line Tools.
 
 ```bash
 swift build -c release --arch arm64
@@ -51,10 +53,10 @@ swift build -c release --arch arm64
 open Lights.app
 ```
 
-`build-app.sh` 会生成 `Lights.app`。如需发布签名或公证，可使用仓库中的 `release-app.sh` 与 `notarize.sh`。
+`build-app.sh` creates `Lights.app`. Use `release-app.sh` and `notarize.sh` for release signing or notarization.
 
-## 致谢与许可
+## Credits and license
 
-本项目基于 [fengyiqicoder/Lights](https://github.com/fengyiqicoder/Lights) 的开源架构进行面向 Codex Desktop 的定制与扩展，感谢原项目提供的基础。
+This project is a Codex Desktop-focused customization and extension of the architecture from [fengyiqicoder/Lights](https://github.com/fengyiqicoder/Lights). Thank you to the original project.
 
-本项目采用 [MIT License](LICENSE)。
+Licensed under the [MIT License](LICENSE).
