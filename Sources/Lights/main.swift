@@ -249,7 +249,7 @@ struct ContentView: View {
     @AppStorage("statusBarSize") private var statusBarSize: LightsSize = .large
     @AppStorage("statusBarBackground") private var statusBarBackground: StatusBarBackground = .black
     @AppStorage("greenLightAlert") private var greenAlert: GreenLightAlert = .five
-    @AppStorage("greenAlertSpeed") private var alertSpeed: GreenAlertSpeed = .slow
+    @AppStorage("greenAlertSpeed") private var alertSpeed: GreenAlertSpeed = .seconds16
     @AppStorage("appLanguage") private var appLanguage: AppLanguage = .english
     @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
 
@@ -330,7 +330,7 @@ struct ContentView: View {
                 }
             }
             Menu(L10n.t("Green Light Alert", "绿灯提醒")) {
-                Menu(L10n.t("Alert Speed", "闪烁速度")) {
+                Menu(L10n.t("Flash Interval", "闪烁间隔")) {
                     ForEach(GreenAlertSpeed.allCases, id: \.rawValue) { opt in
                         Button {
                             alertSpeed = opt

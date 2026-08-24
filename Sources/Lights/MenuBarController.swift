@@ -12,13 +12,21 @@ enum GreenLightAlert: String, CaseIterable {
 }
 
 enum GreenAlertSpeed: String, CaseIterable {
-    case fast, normal, slow
-    var label: String { switch self { case .fast: L10n.t("Fast", "快"); case .normal: L10n.t("Normal", "普通"); case .slow: L10n.t("Slow", "慢") } }
+    case seconds03, seconds05, seconds08, seconds12, seconds16
+    var label: String { switch self {
+    case .seconds03: L10n.t("0.3 s", "0.3 秒")
+    case .seconds05: L10n.t("0.5 s", "0.5 秒")
+    case .seconds08: L10n.t("0.8 s", "0.8 秒")
+    case .seconds12: L10n.t("1.2 s", "1.2 秒")
+    case .seconds16: L10n.t("1.6 s", "1.6 秒")
+    } }
     var halfCycleNanoseconds: UInt64 {
         switch self {
-        case .fast: 160_000_000
-        case .normal: 300_000_000
-        case .slow: 500_000_000
+        case .seconds03: 300_000_000
+        case .seconds05: 500_000_000
+        case .seconds08: 800_000_000
+        case .seconds12: 1_200_000_000
+        case .seconds16: 1_600_000_000
         }
     }
 }
@@ -148,7 +156,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
         let alertItem = NSMenuItem(title: L10n.t("Green Light Alert", "绿灯提醒"), action: nil, keyEquivalent: "")
         let alertMenu = NSMenu()
-        let speedItem = NSMenuItem(title: L10n.t("Alert Speed", "闪烁速度"), action: nil, keyEquivalent: "")
+        let speedItem = NSMenuItem(title: L10n.t("Flash Interval", "闪烁间隔"), action: nil, keyEquivalent: "")
         let speedMenu = NSMenu()
         for opt in GreenAlertSpeed.allCases {
             let m = NSMenuItem(title: opt.label, action: #selector(actionSetAlertSpeed(_:)), keyEquivalent: "")
@@ -334,7 +342,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     private var currentAlertSpeed: GreenAlertSpeed {
-        GreenAlertSpeed(rawValue: UserDefaults.standard.string(forKey: "greenAlertSpeed") ?? "") ?? .slow
+        GreenAlertSpeed(rawValue: UserDefaults.standard.string(forKey: "greenAlertSpeed") ?? "") ?? .seconds16
     }
 
     private var isFloatingVisible: Bool {
