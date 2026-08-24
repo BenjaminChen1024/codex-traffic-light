@@ -18,6 +18,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         if let btn = item.button {
             btn.image = Self.renderStatusIcon(state: currentState)
             btn.imagePosition = .imageOnly
+            btn.imageScaling = .scaleProportionallyDown
         }
         item.isVisible = true
         let menu = NSMenu()
@@ -157,15 +158,26 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     // MARK: - Icon
 
     static func renderStatusIcon(state: LightsState) -> NSImage {
-        let size = NSSize(width: 28, height: 14)
+        let size = NSSize(width: 16, height: 22)
         let img = NSImage(size: size)
         img.lockFocus()
         let ctx = NSGraphicsContext.current!.cgContext
         ctx.setShouldAntialias(true)
         ctx.interpolationQuality = .high
 
-        let dotD: CGFloat = 6
-        let spacing: CGFloat = 3
+        let housing = CGRect(x: 1, y: 0.5, width: 14, height: 21)
+        ctx.setFillColor(NSColor(calibratedWhite: 0.10, alpha: 1).cgColor)
+        ctx.fillPath()
+        let housingPath = CGPath(roundedRect: housing, cornerWidth: 4, cornerHeight: 4, transform: nil)
+        ctx.addPath(housingPath)
+        ctx.fillPath()
+        ctx.setStrokeColor(NSColor(calibratedWhite: 0.75, alpha: 0.22).cgColor)
+        ctx.setLineWidth(0.7)
+        ctx.addPath(housingPath)
+        ctx.strokePath()
+
+        let dotD: CGFloat = 4.4
+        let spacing: CGFloat = 1.65
         let colors: [NSColor] = [.systemRed, .systemYellow, .systemGreen]
         let activeIndex: Int? = switch state {
         case .executing: 0
@@ -174,10 +186,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         case .off: nil
         }
         for i in 0..<3 {
-            ctx.setFillColor(colors[i].withAlphaComponent(activeIndex == i ? 1 : 0.22).cgColor)
-            let x = 2 + CGFloat(i) * (dotD + spacing)
-            ctx.fillEllipse(in: CGRect(x: x, y: (size.height - dotD) / 2,
+            let isActive = activeIndex == i
+            let y = size.height - 3.5 - dotD - CGFloat(i) * (dotD + spacing)
+            if isActive {
+                ctx.setShadow(offset: .zero, blur: 2.2,
+                              color: colors[i].withAlphaComponent(0.80).cgColor)
+            }
+            ctx.setFillColor(colors[i].withAlphaComponent(isActive ? 1 : 0.20).cgColor)
+            ctx.fillEllipse(in: CGRect(x: (size.width - dotD) / 2, y: y,
                                        width: dotD, height: dotD))
+            ctx.setShadow(offset: .zero, blur: 0, color: nil)
         }
         img.unlockFocus()
         img.isTemplate = false
