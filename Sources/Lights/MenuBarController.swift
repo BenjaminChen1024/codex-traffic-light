@@ -11,6 +11,18 @@ enum GreenLightAlert: String, CaseIterable {
     var label: String { switch self { case .never: "Never"; case .once: "Flash Once"; case .three: "Flash 3 Times"; case .five: "Flash 5 Times"; case .ten: "Flash 10 Times" } }
 }
 
+enum GreenAlertSpeed: String, CaseIterable {
+    case fast, normal, slow
+    var label: String { switch self { case .fast: "Fast"; case .normal: "Normal"; case .slow: "Slow" } }
+    var halfCycleNanoseconds: UInt64 {
+        switch self {
+        case .fast: 160_000_000
+        case .normal: 300_000_000
+        case .slow: 500_000_000
+        }
+    }
+}
+
 extension Notification.Name {
     static let lightsShowSetup    = Notification.Name("LightsShowSetup")
     static let lightsRequestOff   = Notification.Name("LightsRequestOff")
@@ -129,6 +141,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         alertItem.submenu = alertMenu
         menu.addItem(alertItem)
 
+        let speedItem = NSMenuItem(title: "Alert Speed", action: nil, keyEquivalent: "")
+        let speedMenu = NSMenu()
+        for opt in GreenAlertSpeed.allCases {
+            let m = NSMenuItem(title: opt.label, action: #selector(actionSetAlertSpeed(_:)), keyEquivalent: "")
+            m.target = self
+            m.representedObject = opt.rawValue
+            m.state = opt == currentAlertSpeed ? .on : .off
+            speedMenu.addItem(m)
+        }
+        speedItem.submenu = speedMenu
+        menu.addItem(speedItem)
+
         menu.addItem(.separator())
         menu.addItem(item("Quit Lights", #selector(actionQuit), key: "q"))
     }
@@ -184,6 +208,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         UserDefaults.standard.set(alert.rawValue, forKey: "greenLightAlert")
     }
 
+    @objc private func actionSetAlertSpeed(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let speed = GreenAlertSpeed(rawValue: raw) else { return }
+        UserDefaults.standard.set(speed.rawValue, forKey: "greenAlertSpeed")
+    }
+
     @objc private func handleStateChange(_ note: Notification) {
         guard let raw = note.userInfo?["state"] as? String,
               let state = LightsState(rawValue: raw) else { return }
@@ -209,10 +239,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             for _ in 0..<self.currentGreenAlert.count {
                 guard generation == self.greenFlashGeneration else { return }
                 self.renderStatus(.off)
-                try? await Task.sleep(nanoseconds: 160_000_000)
+                try? await Task.sleep(nanoseconds: self.currentAlertSpeed.halfCycleNanoseconds)
                 guard generation == self.greenFlashGeneration else { return }
                 self.renderStatus(.idle)
-                try? await Task.sleep(nanoseconds: 160_000_000)
+                try? await Task.sleep(nanoseconds: self.currentAlertSpeed.halfCycleNanoseconds)
             }
         }
     }
@@ -243,6 +273,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     private var currentGreenAlert: GreenLightAlert {
         GreenLightAlert(rawValue: UserDefaults.standard.string(forKey: "greenLightAlert") ?? "") ?? .five
+    }
+
+    private var currentAlertSpeed: GreenAlertSpeed {
+        GreenAlertSpeed(rawValue: UserDefaults.standard.string(forKey: "greenAlertSpeed") ?? "") ?? .slow
     }
 
     private var isFloatingVisible: Bool {

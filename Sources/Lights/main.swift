@@ -246,6 +246,7 @@ struct ContentView: View {
     @AppStorage("lightsLayout") private var layout: LightsLayout = .vertical
     @AppStorage("statusBarBackground") private var background: StatusBarBackground = .black
     @AppStorage("greenLightAlert") private var greenAlert: GreenLightAlert = .five
+    @AppStorage("greenAlertSpeed") private var alertSpeed: GreenAlertSpeed = .slow
 
     var body: some View {
         Group {
@@ -306,6 +307,18 @@ struct ContentView: View {
                         HStack {
                             Text(opt.label)
                             if greenAlert == opt { Spacer(); Image(systemName: "checkmark") }
+                        }
+                    }
+                }
+            }
+            Menu("Alert Speed") {
+                ForEach(GreenAlertSpeed.allCases, id: \.rawValue) { opt in
+                    Button {
+                        alertSpeed = opt
+                    } label: {
+                        HStack {
+                            Text(opt.label)
+                            if alertSpeed == opt { Spacer(); Image(systemName: "checkmark") }
                         }
                     }
                 }
@@ -438,11 +451,11 @@ struct ContentView: View {
         Task { @MainActor in
             for _ in 0..<greenAlert.count {
                 guard generation == greenFlashGeneration else { return }
-                withAnimation(.easeInOut(duration: 0.12)) { greenFlashVisible = false }
-                try? await Task.sleep(nanoseconds: 160_000_000)
+                withAnimation(.easeInOut(duration: min(Double(alertSpeed.halfCycleNanoseconds) / 2_000_000_000, 0.25))) { greenFlashVisible = false }
+                try? await Task.sleep(nanoseconds: alertSpeed.halfCycleNanoseconds)
                 guard generation == greenFlashGeneration else { return }
-                withAnimation(.easeInOut(duration: 0.12)) { greenFlashVisible = true }
-                try? await Task.sleep(nanoseconds: 160_000_000)
+                withAnimation(.easeInOut(duration: min(Double(alertSpeed.halfCycleNanoseconds) / 2_000_000_000, 0.25))) { greenFlashVisible = true }
+                try? await Task.sleep(nanoseconds: alertSpeed.halfCycleNanoseconds)
             }
         }
     }
