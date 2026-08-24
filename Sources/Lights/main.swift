@@ -11,12 +11,6 @@ enum LightsLayout: String, CaseIterable, Identifiable {
     var label: String { self == .vertical ? "Vertical" : "Horizontal" }
 }
 
-enum LightsDisplayMode: String, CaseIterable, Identifiable {
-    case floating, menuBar
-    var id: String { rawValue }
-    var label: String { self == .floating ? "Desktop Floating" : "Menu Bar" }
-}
-
 enum LightsSize: String, CaseIterable, Identifiable {
     case small, medium, large, extraLarge, huge
     var id: String { rawValue }
@@ -98,8 +92,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let initialSize = LightsSize(rawValue: storedRaw) ?? .large
         let storedLayout = UserDefaults.standard.string(forKey: "lightsLayout") ?? LightsLayout.vertical.rawValue
         let initialLayout = LightsLayout(rawValue: storedLayout) ?? .vertical
-        let storedDisplayMode = UserDefaults.standard.string(forKey: "lightsDisplayMode") ?? LightsDisplayMode.floating.rawValue
-        let initialDisplayMode = LightsDisplayMode(rawValue: storedDisplayMode) ?? .floating
+        let legacyDisplayMode = UserDefaults.standard.string(forKey: "lightsDisplayMode")
+        let initialFloatingVisible = UserDefaults.standard.object(forKey: "lightsFloatingVisible") as? Bool
+            ?? (legacyDisplayMode != "menuBar")
         let size = initialSize.windowSize(for: initialLayout)
         // NSScreen.main can be nil for LSUIElement apps at launch (no key window).
         // Fall back to the first screen in the list (system primary).
@@ -124,14 +119,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         win.hasShadow = true
         win.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         win.contentView = NSHostingView(rootView: ContentView())
-        if initialDisplayMode == .floating {
+        if initialFloatingVisible {
             win.makeKeyAndOrderFront(nil)
         } else {
             win.orderOut(nil)
         }
 
         self.window = win
-        if initialDisplayMode == .floating {
+        if initialFloatingVisible {
             NSApp.activate(ignoringOtherApps: true)
         }
 
@@ -141,11 +136,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.applyResize(note)
         }
         NotificationCenter.default.addObserver(
-            forName: .lightsToggleWindow, object: nil, queue: .main
-        ) { [weak self] _ in
-            self?.toggleWindowVisibility()
-        }
-        NotificationCenter.default.addObserver(
             forName: .lightsShowSetup, object: nil, queue: .main
         ) { [weak self] _ in
             self?.showSetupPanel()
@@ -153,9 +143,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.addObserver(
             forName: .lightsSetDisplayMode, object: nil, queue: .main
         ) { [weak self] note in
-            guard let raw = note.userInfo?["raw"] as? String,
-                  let mode = LightsDisplayMode(rawValue: raw) else { return }
-            self?.applyDisplayMode(mode)
+            guard let visible = note.userInfo?["visible"] as? Bool else { return }
+            self?.setFloatingVisibility(visible)
         }
 
         // First-launch: auto-open Setup
@@ -166,23 +155,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    private func toggleWindowVisibility() {
+    private func setFloatingVisibility(_ visible: Bool) {
         guard let win = window else { return }
-        if win.isVisible {
-            win.orderOut(nil)
-        } else {
+        if visible {
             win.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
-        }
-    }
-
-    private func applyDisplayMode(_ mode: LightsDisplayMode) {
-        guard let win = window else { return }
-        if mode == .menuBar {
-            win.orderOut(nil)
         } else {
-            win.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            win.orderOut(nil)
         }
     }
 
@@ -303,24 +282,16 @@ struct ContentView: View {
                     }
                 }
             }
-            Menu("Display Location") {
-                ForEach(LightsDisplayMode.allCases) { opt in
-                    Button {
-                        UserDefaults.standard.set(opt.rawValue, forKey: "lightsDisplayMode")
-                        NotificationCenter.default.post(
-                            name: .lightsSetDisplayMode, object: nil,
-                            userInfo: ["raw": opt.rawValue]
-                        )
-                    } label: {
-                        HStack {
-                            Text(opt.label)
-                            if (UserDefaults.standard.string(forKey: "lightsDisplayMode") ?? LightsDisplayMode.floating.rawValue) == opt.rawValue {
-                                Spacer(); Image(systemName: "checkmark")
-                            }
-                        }
-                    }
+            Toggle("Show Floating Light", isOn: Binding(
+                get: { UserDefaults.standard.object(forKey: "lightsFloatingVisible") as? Bool ?? true },
+                set: { visible in
+                    UserDefaults.standard.set(visible, forKey: "lightsFloatingVisible")
+                    NotificationCenter.default.post(
+                        name: .lightsSetDisplayMode, object: nil,
+                        userInfo: ["visible": visible]
+                    )
                 }
-            }
+            ))
             Divider()
             Button("Setup Hooks…") {
                 NotificationCenter.default.post(name: .lightsShowSetup, object: nil)

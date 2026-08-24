@@ -1,7 +1,6 @@
 import AppKit
 
 extension Notification.Name {
-    static let lightsToggleWindow = Notification.Name("LightsToggleWindow")
     static let lightsShowSetup    = Notification.Name("LightsShowSetup")
     static let lightsRequestOff   = Notification.Name("LightsRequestOff")
     static let lightsSetSize      = Notification.Name("LightsSetSize")
@@ -49,24 +48,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private func rebuild(menu: NSMenu) {
         menu.removeAllItems()
 
-        let displayItem = NSMenuItem(title: "Display Location", action: nil, keyEquivalent: "")
-        let displayMenu = NSMenu()
-        let currentDisplay = LightsDisplayMode(rawValue:
-            UserDefaults.standard.string(forKey: "lightsDisplayMode") ?? "") ?? .floating
-        for opt in LightsDisplayMode.allCases {
-            let m = NSMenuItem(title: opt.label,
-                               action: #selector(actionSetDisplayMode(_:)),
-                               keyEquivalent: "")
-            m.target = self
-            m.representedObject = opt.rawValue
-            m.state = opt == currentDisplay ? .on : .off
-            displayMenu.addItem(m)
-        }
-        displayItem.submenu = displayMenu
-        menu.addItem(displayItem)
-        if currentDisplay == .floating {
-            menu.addItem(item("Show / Hide Window", #selector(actionToggleWindow)))
-        }
+        let floatingItem = item("Show Floating Light", #selector(actionToggleFloating))
+        floatingItem.state = isFloatingVisible ? .on : .off
+        menu.addItem(floatingItem)
         menu.addItem(.separator())
         menu.addItem(item("Setup Hooks…", #selector(actionShowSetup)))
         menu.addItem(.separator())
@@ -116,10 +100,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     // MARK: - Actions
 
-    @objc private func actionToggleWindow() {
-        NotificationCenter.default.post(name: .lightsToggleWindow, object: nil)
-    }
-
     @objc private func actionShowSetup() {
         NotificationCenter.default.post(name: .lightsShowSetup, object: nil)
     }
@@ -140,11 +120,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         )
     }
 
-    @objc private func actionSetDisplayMode(_ sender: NSMenuItem) {
-        guard let raw = sender.representedObject as? String else { return }
-        UserDefaults.standard.set(raw, forKey: "lightsDisplayMode")
+    @objc private func actionToggleFloating() {
+        let visible = !isFloatingVisible
+        UserDefaults.standard.set(visible, forKey: "lightsFloatingVisible")
         NotificationCenter.default.post(
-            name: .lightsSetDisplayMode, object: nil, userInfo: ["raw": raw]
+            name: .lightsSetDisplayMode, object: nil, userInfo: ["visible": visible]
         )
     }
 
@@ -171,6 +151,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     private var currentLayout: LightsLayout {
         LightsLayout(rawValue: UserDefaults.standard.string(forKey: "lightsLayout") ?? "") ?? .vertical
+    }
+
+    private var isFloatingVisible: Bool {
+        if let visible = UserDefaults.standard.object(forKey: "lightsFloatingVisible") as? Bool {
+            return visible
+        }
+        return UserDefaults.standard.string(forKey: "lightsDisplayMode") != "menuBar"
     }
 
     static func renderStatusIcon(state: LightsState, layout: LightsLayout) -> NSImage {
