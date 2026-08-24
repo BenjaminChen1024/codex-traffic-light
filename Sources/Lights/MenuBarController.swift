@@ -16,7 +16,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let btn = item.button {
-            btn.image = Self.renderStatusIcon(state: currentState)
+            btn.image = Self.renderStatusIcon(state: currentState, layout: currentLayout)
             btn.imagePosition = .imageOnly
             btn.imageScaling = .scaleProportionallyDown
         }
@@ -30,6 +30,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleStateChange(_:)),
             name: .lightsStateChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleLayoutChange),
+            name: .lightsSetLayout, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleLayoutChange),
+            name: UserDefaults.didChangeNotification, object: UserDefaults.standard
         )
         NSLog("[Lights] StatusItem isVisible=\(item.isVisible) length=\(item.length)")
     }
@@ -144,7 +152,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         guard let raw = note.userInfo?["state"] as? String,
               let state = LightsState(rawValue: raw) else { return }
         currentState = state
-        statusItem?.button?.image = Self.renderStatusIcon(state: state)
+        statusItem?.button?.image = Self.renderStatusIcon(state: state, layout: currentLayout)
+    }
+
+    @objc private func handleLayoutChange(_ note: Notification) {
+        statusItem?.button?.image = Self.renderStatusIcon(state: currentState, layout: currentLayout)
     }
 
     @objc private func actionOff() {
@@ -157,17 +169,21 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     // MARK: - Icon
 
-    static func renderStatusIcon(state: LightsState) -> NSImage {
-        let size = NSSize(width: 16, height: 22)
+    private var currentLayout: LightsLayout {
+        LightsLayout(rawValue: UserDefaults.standard.string(forKey: "lightsLayout") ?? "") ?? .vertical
+    }
+
+    static func renderStatusIcon(state: LightsState, layout: LightsLayout) -> NSImage {
+        let size = layout == .vertical ? NSSize(width: 16, height: 22) : NSSize(width: 30, height: 14)
         let img = NSImage(size: size)
         img.lockFocus()
         let ctx = NSGraphicsContext.current!.cgContext
         ctx.setShouldAntialias(true)
         ctx.interpolationQuality = .high
 
-        let housing = CGRect(x: 1, y: 0.5, width: 14, height: 21)
-        ctx.setFillColor(NSColor(calibratedWhite: 0.10, alpha: 1).cgColor)
-        ctx.fillPath()
+        let housing = layout == .vertical
+            ? CGRect(x: 1, y: 0.5, width: 14, height: 21)
+            : CGRect(x: 0.5, y: 1, width: 29, height: 12)
         let housingPath = CGPath(roundedRect: housing, cornerWidth: 4, cornerHeight: 4, transform: nil)
         ctx.addPath(housingPath)
         ctx.fillPath()
@@ -187,13 +203,21 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
         for i in 0..<3 {
             let isActive = activeIndex == i
-            let y = size.height - 3.5 - dotD - CGFloat(i) * (dotD + spacing)
+            let x: CGFloat
+            let y: CGFloat
+            if layout == .vertical {
+                x = (size.width - dotD) / 2
+                y = size.height - 3.5 - dotD - CGFloat(i) * (dotD + spacing)
+            } else {
+                x = 3.6 + CGFloat(i) * (dotD + spacing)
+                y = (size.height - dotD) / 2
+            }
             if isActive {
                 ctx.setShadow(offset: .zero, blur: 2.2,
                               color: colors[i].withAlphaComponent(0.80).cgColor)
             }
             ctx.setFillColor(colors[i].withAlphaComponent(isActive ? 1 : 0.20).cgColor)
-            ctx.fillEllipse(in: CGRect(x: (size.width - dotD) / 2, y: y,
+            ctx.fillEllipse(in: CGRect(x: x, y: y,
                                        width: dotD, height: dotD))
             ctx.setShadow(offset: .zero, blur: 0, color: nil)
         }
