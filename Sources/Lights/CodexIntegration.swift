@@ -11,10 +11,10 @@ final class CodexIntegration: ToolIntegration {
 
     var statusBlurb: String {
         switch detectStatus() {
-        case .toolNotInstalled:        return "Not installed"
-        case .toolPresentHookMissing:  return "Installed — Lights hook missing"
-        case .configured:              return "Hooks configured ✓"
-        case .unknown(let why):        return "Error: \(why)"
+        case .toolNotInstalled:        return L10n.t("Not installed", "未安装")
+        case .toolPresentHookMissing:  return L10n.t("Installed — Lights hook missing", "已安装 — 缺少 Lights Hook")
+        case .configured:              return L10n.t("Hooks configured ✓", "Hooks 已配置 ✓")
+        case .unknown(let why):        return L10n.t("Error: \(why)", "错误：\(why)")
         }
     }
 

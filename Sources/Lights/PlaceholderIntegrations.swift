@@ -1,24 +1,5 @@
 import Foundation
 
-final class GooseIntegration: ToolIntegration {
-    let id = "goose"
-    let displayName = "Goose"
-    let supportLevel: SupportLevel = .comingSoon
-
-    var statusBlurb: String {
-        isCommandAvailable("goose")
-            ? "Installed — hooks API still being researched (v2)"
-            : "Not installed"
-    }
-
-    func detectStatus() -> InstallStatus {
-        isCommandAvailable("goose") ? .toolPresentHookMissing : .toolNotInstalled
-    }
-
-    func install() throws   { throw ToolIntegrationError.notImplemented("Goose") }
-    func uninstall() throws { throw ToolIntegrationError.notImplemented("Goose") }
-}
-
 final class OpenCodeIntegration: ToolIntegration {
     let id = "opencode"
     let displayName = "OpenCode"
@@ -26,8 +7,8 @@ final class OpenCodeIntegration: ToolIntegration {
 
     var statusBlurb: String {
         isCommandAvailable("opencode")
-            ? "Installed — OpenCode has no event hooks"
-            : "Not installed"
+            ? L10n.t("Installed — OpenCode has no event hooks", "已安装 — OpenCode 不支持事件 Hooks")
+            : L10n.t("Not installed", "未安装")
     }
 
     func detectStatus() -> InstallStatus {

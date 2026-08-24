@@ -2,18 +2,18 @@ import AppKit
 
 enum StatusBarBackground: String, CaseIterable {
     case black, transparent
-    var label: String { self == .black ? "Black" : "Transparent" }
+    var label: String { self == .black ? L10n.t("Black", "黑色") : L10n.t("Transparent", "透明") }
 }
 
 enum GreenLightAlert: String, CaseIterable {
     case never, once, three, five, ten
     var count: Int { switch self { case .never: 0; case .once: 1; case .three: 3; case .five: 5; case .ten: 10 } }
-    var label: String { switch self { case .never: "Never"; case .once: "Flash Once"; case .three: "Flash 3 Times"; case .five: "Flash 5 Times"; case .ten: "Flash 10 Times" } }
+    var label: String { switch self { case .never: L10n.t("Never", "不闪烁"); case .once: L10n.t("Flash Once", "闪烁 1 次"); case .three: L10n.t("Flash 3 Times", "闪烁 3 次"); case .five: L10n.t("Flash 5 Times", "闪烁 5 次"); case .ten: L10n.t("Flash 10 Times", "闪烁 10 次") } }
 }
 
 enum GreenAlertSpeed: String, CaseIterable {
     case fast, normal, slow
-    var label: String { switch self { case .fast: "Fast"; case .normal: "Normal"; case .slow: "Slow" } }
+    var label: String { switch self { case .fast: L10n.t("Fast", "快"); case .normal: L10n.t("Normal", "普通"); case .slow: L10n.t("Slow", "慢") } }
     var halfCycleNanoseconds: UInt64 {
         switch self {
         case .fast: 160_000_000
@@ -35,11 +35,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var currentState: LightsState = .idle
     private var greenFlashGeneration = 0
+    private let launchAtLogin = LaunchAtLoginManager.shared
 
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let btn = item.button {
-            btn.image = Self.renderStatusIcon(state: currentState, layout: currentLayout, size: currentSize, background: currentBackground)
+            btn.image = Self.renderStatusIcon(state: currentState, layout: currentLayout, size: currentStatusSize, background: currentBackground)
             btn.imagePosition = .imageOnly
             btn.imageScaling = .scaleProportionallyDown
         }
@@ -76,13 +77,15 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private func rebuild(menu: NSMenu) {
         menu.removeAllItems()
 
-        let floatingItem = item("Show Light", #selector(actionToggleFloating))
+        let floatingItem = item(L10n.t("Show Light", "显示悬浮灯"), #selector(actionToggleFloating))
         floatingItem.state = isFloatingVisible ? .on : .off
         menu.addItem(floatingItem)
         menu.addItem(.separator())
 
-        let sizeItem = NSMenuItem(title: "Size", action: nil, keyEquivalent: "")
+        let sizeItem = NSMenuItem(title: L10n.t("Size", "大小"), action: nil, keyEquivalent: "")
         let sizeMenu = NSMenu()
+        let floatingSizeItem = NSMenuItem(title: L10n.t("Floating Light", "悬浮灯"), action: nil, keyEquivalent: "")
+        let floatingSizeMenu = NSMenu()
         let currentSize = LightsSize(rawValue:
             UserDefaults.standard.string(forKey: "lightsSize") ?? "") ?? .large
         for opt in LightsSize.allCases {
@@ -92,12 +95,28 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             m.target = self
             m.representedObject = opt.rawValue
             m.state = (opt == currentSize) ? .on : .off
-            sizeMenu.addItem(m)
+            floatingSizeMenu.addItem(m)
         }
+        floatingSizeItem.submenu = floatingSizeMenu
+        sizeMenu.addItem(floatingSizeItem)
+
+        let statusSizeItem = NSMenuItem(title: L10n.t("Status Bar", "状态栏"), action: nil, keyEquivalent: "")
+        let statusSizeMenu = NSMenu()
+        for opt in LightsSize.allCases {
+            let m = NSMenuItem(title: opt.label,
+                               action: #selector(actionSetStatusBarSize(_:)),
+                               keyEquivalent: "")
+            m.target = self
+            m.representedObject = opt.rawValue
+            m.state = (opt == currentStatusSize) ? .on : .off
+            statusSizeMenu.addItem(m)
+        }
+        statusSizeItem.submenu = statusSizeMenu
+        sizeMenu.addItem(statusSizeItem)
         sizeItem.submenu = sizeMenu
         menu.addItem(sizeItem)
 
-        let layoutItem = NSMenuItem(title: "Layout", action: nil, keyEquivalent: "")
+        let layoutItem = NSMenuItem(title: L10n.t("Layout", "布局"), action: nil, keyEquivalent: "")
         let layoutMenu = NSMenu()
         let currentLayout = LightsLayout(rawValue:
             UserDefaults.standard.string(forKey: "lightsLayout") ?? "") ?? .vertical
@@ -113,7 +132,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         layoutItem.submenu = layoutMenu
         menu.addItem(layoutItem)
 
-        let backgroundItem = NSMenuItem(title: "Status Bar Background", action: nil, keyEquivalent: "")
+        let backgroundItem = NSMenuItem(title: L10n.t("Status Bar Background", "状态栏背景"), action: nil, keyEquivalent: "")
         let backgroundMenu = NSMenu()
         for opt in StatusBarBackground.allCases {
             let m = NSMenuItem(title: opt.label,
@@ -127,9 +146,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         backgroundItem.submenu = backgroundMenu
         menu.addItem(backgroundItem)
 
-        let alertItem = NSMenuItem(title: "Green Light Alert", action: nil, keyEquivalent: "")
+        let alertItem = NSMenuItem(title: L10n.t("Green Light Alert", "绿灯提醒"), action: nil, keyEquivalent: "")
         let alertMenu = NSMenu()
-        let speedItem = NSMenuItem(title: "Alert Speed", action: nil, keyEquivalent: "")
+        let speedItem = NSMenuItem(title: L10n.t("Alert Speed", "闪烁速度"), action: nil, keyEquivalent: "")
         let speedMenu = NSMenu()
         for opt in GreenAlertSpeed.allCases {
             let m = NSMenuItem(title: opt.label, action: #selector(actionSetAlertSpeed(_:)), keyEquivalent: "")
@@ -152,9 +171,23 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(alertItem)
 
         menu.addItem(.separator())
-        menu.addItem(item("Setup Hooks…", #selector(actionShowSetup)))
+        menu.addItem(item(L10n.t("Setup Hooks…", "配置 Hooks…"), #selector(actionShowSetup)))
+        let loginItem = item(L10n.t("Launch Lights at Login", "登录时启动 Lights"), #selector(actionToggleLaunchAtLogin))
+        loginItem.state = launchAtLogin.isEnabled ? .on : .off
+        menu.addItem(loginItem)
+        let languageItem = NSMenuItem(title: "Language / 语言", action: nil, keyEquivalent: "")
+        let languageMenu = NSMenu()
+        for language in AppLanguage.allCases {
+            let m = NSMenuItem(title: language.label, action: #selector(actionSetLanguage(_:)), keyEquivalent: "")
+            m.target = self
+            m.representedObject = language.rawValue
+            m.state = language == AppLanguage.current ? .on : .off
+            languageMenu.addItem(m)
+        }
+        languageItem.submenu = languageMenu
+        menu.addItem(languageItem)
         menu.addItem(.separator())
-        menu.addItem(item("Quit Lights", #selector(actionQuit), key: "q"))
+        menu.addItem(item(L10n.t("Quit Lights", "退出 Lights"), #selector(actionQuit), key: "q"))
     }
 
     private func item(_ title: String, _ selector: Selector, key: String = "") -> NSMenuItem {
@@ -169,11 +202,32 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         NotificationCenter.default.post(name: .lightsShowSetup, object: nil)
     }
 
+    @objc private func actionSetLanguage(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let language = AppLanguage(rawValue: raw) else { return }
+        UserDefaults.standard.set(language.rawValue, forKey: "appLanguage")
+        statusItem?.menu.map { rebuild(menu: $0) }
+    }
+
+    @objc private func actionToggleLaunchAtLogin() {
+        launchAtLogin.setEnabled(!launchAtLogin.isEnabled)
+        if let menu = statusItem?.menu { rebuild(menu: menu) }
+    }
+
     @objc private func actionSetSize(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String else { return }
         UserDefaults.standard.set(raw, forKey: "lightsSize")
         NotificationCenter.default.post(
             name: .lightsSetSize, object: nil, userInfo: ["raw": raw]
+        )
+    }
+
+    @objc private func actionSetStatusBarSize(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let size = LightsSize(rawValue: raw) else { return }
+        UserDefaults.standard.set(size.rawValue, forKey: "statusBarSize")
+        statusItem?.button?.image = Self.renderStatusIcon(
+            state: currentState, layout: currentLayout, size: size, background: currentBackground
         )
     }
 
@@ -198,7 +252,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
               let background = StatusBarBackground(rawValue: raw) else { return }
         UserDefaults.standard.set(background.rawValue, forKey: "statusBarBackground")
         statusItem?.button?.image = Self.renderStatusIcon(
-            state: currentState, layout: currentLayout, size: currentSize, background: background
+            state: currentState, layout: currentLayout, size: currentStatusSize, background: background
         )
     }
 
@@ -220,13 +274,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         currentState = state
         if state != .idle { greenFlashGeneration += 1 }
         statusItem?.button?.image = Self.renderStatusIcon(
-            state: state, layout: currentLayout, size: currentSize, background: currentBackground
+            state: state, layout: currentLayout, size: currentStatusSize, background: currentBackground
         )
     }
 
     @objc private func handleLayoutChange(_ note: Notification) {
         statusItem?.button?.image = Self.renderStatusIcon(
-            state: currentState, layout: currentLayout, size: currentSize, background: currentBackground
+            state: currentState, layout: currentLayout, size: currentStatusSize, background: currentBackground
         )
     }
 
@@ -249,7 +303,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     private func renderStatus(_ state: LightsState) {
         statusItem?.button?.image = Self.renderStatusIcon(
-            state: state, layout: currentLayout, size: currentSize, background: currentBackground
+            state: state, layout: currentLayout, size: currentStatusSize, background: currentBackground
         )
     }
 
@@ -265,6 +319,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     private var currentSize: LightsSize {
         LightsSize(rawValue: UserDefaults.standard.string(forKey: "lightsSize") ?? "") ?? .large
+    }
+
+    private var currentStatusSize: LightsSize {
+        LightsSize(rawValue: UserDefaults.standard.string(forKey: "statusBarSize") ?? "") ?? .large
     }
 
     private var currentBackground: StatusBarBackground {
@@ -287,7 +345,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     static func renderStatusIcon(state: LightsState, layout: LightsLayout, size selectedSize: LightsSize, background: StatusBarBackground) -> NSImage {
-        let scale = min(selectedSize.bulb / LightsSize.large.bulb, 1)
+        let scale = selectedSize.statusBarScale
         let dotD: CGFloat = 4.4 * scale
         let spacing: CGFloat = 1.65 * scale
         let pad: CGFloat = 3.5 * scale

@@ -3,6 +3,7 @@ import AppKit
 
 struct SetupView: View {
     @ObservedObject var mgr: SetupManager = .shared
+    @AppStorage("appLanguage") private var appLanguage: AppLanguage = .english
     var onDone: () -> Void = {}
 
     var body: some View {
@@ -20,7 +21,7 @@ struct SetupView: View {
 
     private var header: some View {
         HStack {
-            Text("Lights Setup")
+            Text(L10n.t("Lights Setup", "Lights 配置"))
                 .font(.title2.bold())
             Spacer()
         }
@@ -30,7 +31,7 @@ struct SetupView: View {
     }
 
     private var intro: some View {
-        Text("Connect Lights to your AI coding tools. Lights must be running for hooks to reach it.")
+        Text(L10n.t("Connect Lights to your AI coding tools. Lights must be running for hooks to reach it.", "将 Lights 连接到 AI 编程工具。Lights 必须保持运行，Hooks 才能更新状态。"))
             .font(.callout)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -50,12 +51,12 @@ struct SetupView: View {
 
     private var footer: some View {
         HStack {
-            Text("Backups saved beside the config files.")
+            Text(L10n.t("Backups saved beside the config files.", "备份会保存在配置文件旁。"))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
             Spacer()
-            Button("Refresh") { mgr.refreshAll() }
-            Button("Done") {
+            Button(L10n.t("Refresh", "刷新")) { mgr.refreshAll() }
+            Button(L10n.t("Done", "完成")) {
                 SetupManager.markSetupSeen()
                 onDone()
             }
@@ -83,6 +84,12 @@ private struct ToolRow: View {
                     Text(err)
                         .font(.caption2)
                         .foregroundStyle(.red)
+                        .lineLimit(2)
+                }
+                if let success = mgr.lastSuccess[state.id] {
+                    Text(success)
+                        .font(.caption2)
+                        .foregroundStyle(.green)
                         .lineLimit(2)
                 }
             }
@@ -113,20 +120,25 @@ private struct ToolRow: View {
 
     @ViewBuilder
     private var actionButton: some View {
-        switch (state.tool.supportLevel, state.status) {
-        case (.notSupported, _):
-            Text("N/A").font(.caption).foregroundStyle(.tertiary)
-        case (.comingSoon, _):
-            Text("v2").font(.caption).foregroundStyle(.tertiary)
-        case (.events, .toolNotInstalled):
-            Text("—").font(.caption).foregroundStyle(.tertiary)
-        case (.events, .toolPresentHookMissing):
-            Button("Install") { mgr.install(state) }
+        if state.tool.id == "codex-desktop" {
+            Button(L10n.t("Configure", "配置")) { mgr.install(state) }
                 .buttonStyle(.borderedProminent)
-        case (.events, .configured):
-            Button("Uninstall") { mgr.uninstall(state) }
-        case (.events, .unknown):
-            Button("Retry") { state.refresh() }
+        } else {
+            switch (state.tool.supportLevel, state.status) {
+            case (.notSupported, _):
+                Text("N/A").font(.caption).foregroundStyle(.tertiary)
+            case (.comingSoon, _):
+                Text("v2").font(.caption).foregroundStyle(.tertiary)
+            case (.events, .toolNotInstalled):
+                Text("—").font(.caption).foregroundStyle(.tertiary)
+            case (.events, .toolPresentHookMissing):
+                Button(L10n.t("Install", "安装")) { mgr.install(state) }
+                    .buttonStyle(.borderedProminent)
+            case (.events, .configured):
+                Button(L10n.t("Uninstall", "移除")) { mgr.uninstall(state) }
+            case (.events, .unknown):
+                Button(L10n.t("Retry", "重试")) { state.refresh() }
+            }
         }
     }
 }

@@ -8,7 +8,7 @@ extension Notification.Name {
 enum LightsLayout: String, CaseIterable, Identifiable {
     case vertical, horizontal
     var id: String { rawValue }
-    var label: String { self == .vertical ? "Vertical" : "Horizontal" }
+    var label: String { self == .vertical ? L10n.t("Vertical", "纵向") : L10n.t("Horizontal", "横向") }
 }
 
 enum LightsSize: String, CaseIterable, Identifiable {
@@ -24,7 +24,8 @@ enum LightsSize: String, CaseIterable, Identifiable {
     var glowOuter: CGFloat { bulb * 0.18 }
     var glowFar:   CGFloat { bulb * 0.35 }
     var highlightInset: CGFloat { bulb / 18 + 1 }
-    var label: String { switch self { case .small: "Small"; case .medium: "Medium"; case .large: "Large"; case .extraLarge: "Extra Large"; case .huge: "Huge" } }
+    var label: String { switch self { case .small: L10n.t("Small", "小"); case .medium: L10n.t("Medium", "中"); case .large: L10n.t("Large", "大"); case .extraLarge: L10n.t("Extra Large", "特大"); case .huge: L10n.t("Huge", "超大") } }
+    var statusBarScale: CGFloat { switch self { case .small: 0.85; case .medium: 1.05; case .large: 1.25; case .extraLarge: 1.45; case .huge: 1.65 } }
 
     func windowSize(for layout: LightsLayout) -> NSSize {
         switch layout {
@@ -245,8 +246,12 @@ struct ContentView: View {
     @State private var greenFlashGeneration = 0
     @AppStorage("lightsSize") private var size: LightsSize = .large
     @AppStorage("lightsLayout") private var layout: LightsLayout = .vertical
+    @AppStorage("statusBarSize") private var statusBarSize: LightsSize = .large
+    @AppStorage("statusBarBackground") private var statusBarBackground: StatusBarBackground = .black
     @AppStorage("greenLightAlert") private var greenAlert: GreenLightAlert = .five
     @AppStorage("greenAlertSpeed") private var alertSpeed: GreenAlertSpeed = .slow
+    @AppStorage("appLanguage") private var appLanguage: AppLanguage = .english
+    @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
 
     var body: some View {
         Group {
@@ -263,7 +268,7 @@ struct ContentView: View {
         .padding(size.padding)
         .background(housing)
         .contextMenu {
-            Toggle("Show Light", isOn: Binding(
+            Toggle(L10n.t("Show Light", "显示悬浮灯"), isOn: Binding(
                 get: { UserDefaults.standard.object(forKey: "lightsFloatingVisible") as? Bool ?? true },
                 set: { visible in
                     UserDefaults.standard.set(visible, forKey: "lightsFloatingVisible")
@@ -274,19 +279,33 @@ struct ContentView: View {
                 }
             ))
             Divider()
-            Menu("Size") {
-                ForEach(LightsSize.allCases) { opt in
-                    Button {
-                        size = opt
-                    } label: {
-                        HStack {
-                            Text(opt.label)
-                            if size == opt { Spacer(); Image(systemName: "checkmark") }
+            Menu(L10n.t("Size", "大小")) {
+                Menu(L10n.t("Floating Light", "悬浮灯")) {
+                    ForEach(LightsSize.allCases) { opt in
+                        Button {
+                            size = opt
+                        } label: {
+                            HStack {
+                                Text(opt.label)
+                                if size == opt { Spacer(); Image(systemName: "checkmark") }
+                            }
+                        }
+                    }
+                }
+                Menu(L10n.t("Status Bar", "状态栏")) {
+                    ForEach(LightsSize.allCases) { opt in
+                        Button {
+                            statusBarSize = opt
+                        } label: {
+                            HStack {
+                                Text(opt.label)
+                                if statusBarSize == opt { Spacer(); Image(systemName: "checkmark") }
+                            }
                         }
                     }
                 }
             }
-            Menu("Layout") {
+            Menu(L10n.t("Layout", "布局")) {
                 ForEach(LightsLayout.allCases) { opt in
                     Button {
                         layout = opt
@@ -298,8 +317,20 @@ struct ContentView: View {
                     }
                 }
             }
-            Menu("Green Light Alert") {
-                Menu("Alert Speed") {
+            Menu(L10n.t("Status Bar Background", "状态栏背景")) {
+                ForEach(StatusBarBackground.allCases, id: \.rawValue) { opt in
+                    Button {
+                        statusBarBackground = opt
+                    } label: {
+                        HStack {
+                            Text(opt.label)
+                            if statusBarBackground == opt { Spacer(); Image(systemName: "checkmark") }
+                        }
+                    }
+                }
+            }
+            Menu(L10n.t("Green Light Alert", "绿灯提醒")) {
+                Menu(L10n.t("Alert Speed", "闪烁速度")) {
                     ForEach(GreenAlertSpeed.allCases, id: \.rawValue) { opt in
                         Button {
                             alertSpeed = opt
@@ -324,11 +355,27 @@ struct ContentView: View {
                 }
             }
             Divider()
-            Button("Setup Hooks…") {
+            Button(L10n.t("Setup Hooks…", "配置 Hooks…")) {
                 NotificationCenter.default.post(name: .lightsShowSetup, object: nil)
             }
+            Toggle(L10n.t("Launch Lights at Login", "登录时启动 Lights"), isOn: Binding(
+                get: { launchAtLogin.isEnabled },
+                set: { launchAtLogin.setEnabled($0) }
+            ))
+            Menu("Language / 语言") {
+                ForEach(AppLanguage.allCases) { language in
+                    Button {
+                        appLanguage = language
+                    } label: {
+                        HStack {
+                            Text(language.label)
+                            if appLanguage == language { Spacer(); Image(systemName: "checkmark") }
+                        }
+                    }
+                }
+            }
             Divider()
-            Button("Quit Lights") { NSApp.terminate(nil) }
+            Button(L10n.t("Quit Lights", "退出 Lights")) { NSApp.terminate(nil) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .lightsStateChange)) { note in
             guard let raw = note.userInfo?["state"] as? String else { return }

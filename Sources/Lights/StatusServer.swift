@@ -18,6 +18,7 @@ final class StatusServer {
     private let port: NWEndpoint.Port
     private var listener: NWListener?
     private(set) var currentState: LightsState = .idle
+    private let diagnosticLogURL = URL(fileURLWithPath: "/tmp/lights-status.log")
 
     init(port: UInt16 = 9876) {
         self.port = NWEndpoint.Port(rawValue: port)!
@@ -81,6 +82,8 @@ final class StatusServer {
 
     private func route(path: String) -> Response {
         let cleaned = path.split(separator: "?").first.map(String.init) ?? path
+        NSLog("[Lights] request route=\(cleaned) current=\(currentState.rawValue)")
+        appendDiagnosticLog("request route=\(cleaned) current=\(currentState.rawValue)")
         switch cleaned {
         case "/executing":
             return setState(.executing)
@@ -131,6 +134,8 @@ final class StatusServer {
     private func setState(_ state: LightsState) -> Response {
         let previousState = currentState
         currentState = state
+        NSLog("[Lights] state \(previousState.rawValue) -> \(state.rawValue)")
+        appendDiagnosticLog("state \(previousState.rawValue) -> \(state.rawValue)")
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .lightsStateChange,
@@ -142,5 +147,20 @@ final class StatusServer {
             }
         }
         return Response(status: "200 OK", body: state.rawValue)
+    }
+
+    private func appendDiagnosticLog(_ message: String) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let line = "\(timestamp) \(message)\n"
+        guard let data = line.data(using: .utf8) else { return }
+        if FileManager.default.fileExists(atPath: diagnosticLogURL.path) {
+            if let handle = try? FileHandle(forWritingTo: diagnosticLogURL) {
+                defer { try? handle.close() }
+                _ = try? handle.seekToEnd()
+                try? handle.write(contentsOf: data)
+            }
+        } else {
+            try? data.write(to: diagnosticLogURL, options: .atomic)
+        }
     }
 }

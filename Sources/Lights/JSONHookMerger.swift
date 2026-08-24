@@ -36,8 +36,12 @@ enum JSONHookMerger {
         "9876/executing", "9876/permission", "9876/idle", "9876/off"
     ]
 
-    private static func lightsCurl(_ endpoint: String) -> String {
+    static func lightsCommand(_ endpoint: String) -> String {
         "curl -s --max-time 1 http://127.0.0.1:9876/\(endpoint) >/dev/null 2>&1 || true"
+    }
+
+    private static func lightsCurl(_ endpoint: String) -> String {
+        lightsCommand(endpoint)
     }
 
     // MARK: - File helpers
@@ -162,5 +166,18 @@ enum JSONHookMerger {
             }
         }
         return false
+    }
+
+    /// True when every requested event, matcher, and command is present.
+    static func containsAllHooks(_ settings: [String: Any], specs: [HookSpec]) -> Bool {
+        guard let hooks = settings["hooks"] as? [String: Any] else { return false }
+        return specs.allSatisfy { spec in
+            guard let events = hooks[spec.event] as? [[String: Any]] else { return false }
+            return events.contains { entry in
+                guard (entry["matcher"] as? String) == spec.matcher else { return false }
+                guard let commands = entry["hooks"] as? [[String: Any]] else { return false }
+                return commands.contains { ($0["command"] as? String) == spec.command }
+            }
+        }
     }
 }

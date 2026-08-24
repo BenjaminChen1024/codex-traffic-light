@@ -22,12 +22,13 @@ final class ToolIntegrationState: ObservableObject, Identifiable {
 final class SetupManager: ObservableObject {
     static let shared = SetupManager()
     @Published var tools: [ToolIntegrationState]
+    @Published var lastSuccess: [String: String] = [:]
 
     private init() {
         let initial = [
             ToolIntegrationState(tool: ClaudeCodeIntegration()),
             ToolIntegrationState(tool: CodexIntegration()),
-            ToolIntegrationState(tool: GooseIntegration()),
+            ToolIntegrationState(tool: CodexDesktopIntegration()),
             ToolIntegrationState(tool: OpenCodeIntegration()),
         ]
         for s in initial { s.status = s.tool.detectStatus() }
@@ -40,9 +41,15 @@ final class SetupManager: ObservableObject {
 
     func install(_ state: ToolIntegrationState) {
         state.lastError = nil
+        lastSuccess[state.id] = nil
         do {
             try state.tool.install()
             state.refresh()
+            if state.tool.id == "codex-desktop" {
+                lastSuccess[state.id] = L10n.t("Configured. Restart Codex to apply.", "已配置，请重启 Codex 生效。")
+            } else {
+                lastSuccess[state.id] = L10n.t("Configured successfully.", "配置成功。")
+            }
         } catch {
             state.lastError = error.localizedDescription
         }
@@ -50,6 +57,7 @@ final class SetupManager: ObservableObject {
 
     func uninstall(_ state: ToolIntegrationState) {
         state.lastError = nil
+        lastSuccess[state.id] = nil
         do {
             try state.tool.uninstall()
             state.refresh()
