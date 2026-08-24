@@ -240,6 +240,8 @@ enum Light: Hashable { case red, yellow, green }
 struct ContentView: View {
     @State private var active: Light? = .green
     @State private var yellowStickyUntil: Date = .distantPast
+    @State private var greenFlashVisible = true
+    @State private var greenFlashGeneration = 0
     @AppStorage("lightsSize") private var size: LightsSize = .large
     @AppStorage("lightsLayout") private var layout: LightsLayout = .vertical
 
@@ -306,6 +308,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .lightsRequestOff)) { _ in
             setActive(nil)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .lightsGreenFlash)) { _ in
+            startGreenFlash()
+        }
         .onChange(of: size) { _, newSize in
             let dim = newSize.windowSize(for: layout)
             NotificationCenter.default.post(
@@ -326,7 +331,7 @@ struct ContentView: View {
     private var lights: some View {
         LightView(palette: .red,    isOn: active == .red,    size: size)
         LightView(palette: .yellow, isOn: active == .yellow, size: size)
-        LightView(palette: .green,  isOn: active == .green,  size: size)
+        LightView(palette: .green,  isOn: active == .green && greenFlashVisible, size: size)
     }
 
     private func handleSignal(_ raw: String) {
@@ -348,6 +353,9 @@ struct ContentView: View {
         }
         if target == .yellow {
             yellowStickyUntil = Date().addingTimeInterval(0.2)
+        }
+        if target != .green {
+            cancelGreenFlash()
         }
         setActive(target)
     }
@@ -383,6 +391,27 @@ struct ContentView: View {
     private func setActive(_ light: Light?) {
         withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
             active = light
+        }
+    }
+
+    private func cancelGreenFlash() {
+        greenFlashGeneration += 1
+        greenFlashVisible = true
+    }
+
+    private func startGreenFlash() {
+        guard active == .green else { return }
+        greenFlashGeneration += 1
+        let generation = greenFlashGeneration
+        Task { @MainActor in
+            for _ in 0..<5 {
+                guard generation == greenFlashGeneration else { return }
+                withAnimation(.easeInOut(duration: 0.12)) { greenFlashVisible = false }
+                try? await Task.sleep(nanoseconds: 160_000_000)
+                guard generation == greenFlashGeneration else { return }
+                withAnimation(.easeInOut(duration: 0.12)) { greenFlashVisible = true }
+                try? await Task.sleep(nanoseconds: 160_000_000)
+            }
         }
     }
 }

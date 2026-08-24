@@ -16,6 +16,7 @@ extension Notification.Name {
 final class MenuBarController: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var currentState: LightsState = .idle
+    private var greenFlashGeneration = 0
 
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -34,6 +35,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleStateChange(_:)),
             name: .lightsStateChange, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleGreenFlash),
+            name: .lightsGreenFlash, object: nil
         )
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleLayoutChange),
@@ -159,6 +164,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         guard let raw = note.userInfo?["state"] as? String,
               let state = LightsState(rawValue: raw) else { return }
         currentState = state
+        if state != .idle { greenFlashGeneration += 1 }
         statusItem?.button?.image = Self.renderStatusIcon(
             state: state, layout: currentLayout, background: currentBackground
         )
@@ -167,6 +173,29 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func handleLayoutChange(_ note: Notification) {
         statusItem?.button?.image = Self.renderStatusIcon(
             state: currentState, layout: currentLayout, background: currentBackground
+        )
+    }
+
+    @objc private func handleGreenFlash() {
+        guard currentState == .idle else { return }
+        greenFlashGeneration += 1
+        let generation = greenFlashGeneration
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            for _ in 0..<5 {
+                guard generation == self.greenFlashGeneration else { return }
+                self.renderStatus(.off)
+                try? await Task.sleep(nanoseconds: 160_000_000)
+                guard generation == self.greenFlashGeneration else { return }
+                self.renderStatus(.idle)
+                try? await Task.sleep(nanoseconds: 160_000_000)
+            }
+        }
+    }
+
+    private func renderStatus(_ state: LightsState) {
+        statusItem?.button?.image = Self.renderStatusIcon(
+            state: state, layout: currentLayout, background: currentBackground
         )
     }
 

@@ -4,6 +4,7 @@ import AppKit
 
 extension Notification.Name {
     static let lightsStateChange = Notification.Name("LightsStateChange")
+    static let lightsGreenFlash = Notification.Name("LightsGreenFlash")
 }
 
 enum LightsState: String {
@@ -128,6 +129,7 @@ final class StatusServer {
     }
 
     private func setState(_ state: LightsState) -> Response {
+        let previousState = currentState
         currentState = state
         DispatchQueue.main.async {
             NotificationCenter.default.post(
@@ -135,6 +137,9 @@ final class StatusServer {
                 object: nil,
                 userInfo: ["state": state.rawValue]
             )
+            if state == .idle && (previousState == .executing || previousState == .permission) {
+                NotificationCenter.default.post(name: .lightsGreenFlash, object: nil)
+            }
         }
         return Response(status: "200 OK", body: state.rawValue)
     }
