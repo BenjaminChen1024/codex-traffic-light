@@ -20,21 +20,20 @@ enum LightsSize: String, CaseIterable, Identifiable {
     var padding: CGFloat { switch self { case .small: 7;  case .medium: 9;  case .large: 11; case .extraLarge: 13; case .huge: 15 } }
     var corner: CGFloat  { switch self { case .small: 12; case .medium: 15; case .large: 18; case .extraLarge: 21; case .huge: 24 } }
     var socket: CGFloat { bulb + 8 }
-    var glowOuter: CGFloat { bulb * 0.5 }
-    var glowFar:   CGFloat { bulb * 1.0 }
-    /// Transparent room outside the housing so the outer light glow can fade naturally.
-    var glowInset: CGFloat { glowFar + 2 }
+    // Keep glow inside the housing padding so edge bulbs do not create a clipped halo.
+    var glowOuter: CGFloat { bulb * 0.18 }
+    var glowFar:   CGFloat { bulb * 0.35 }
     var highlightInset: CGFloat { bulb / 18 + 1 }
     var label: String { switch self { case .small: "Small"; case .medium: "Medium"; case .large: "Large"; case .extraLarge: "Extra Large"; case .huge: "Huge" } }
 
     func windowSize(for layout: LightsLayout) -> NSSize {
         switch layout {
         case .vertical:
-            NSSize(width: socket + 2 * padding + 2 * glowInset,
-                   height: 3 * socket + 2 * spacing + 2 * padding + 2 * glowInset)
+            NSSize(width: socket + 2 * padding,
+                   height: 3 * socket + 2 * spacing + 2 * padding)
         case .horizontal:
-            NSSize(width: 3 * socket + 2 * spacing + 2 * padding + 2 * glowInset,
-                   height: socket + 2 * padding + 2 * glowInset)
+            NSSize(width: 3 * socket + 2 * spacing + 2 * padding,
+                   height: socket + 2 * padding)
         }
     }
 }
@@ -264,7 +263,6 @@ struct ContentView: View {
         }
         .padding(size.padding)
         .background(housing)
-        .padding(size.glowInset)
         .contextMenu {
             Toggle("Show Light", isOn: Binding(
                 get: { UserDefaults.standard.object(forKey: "lightsFloatingVisible") as? Bool ?? true },
