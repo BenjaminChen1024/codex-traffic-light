@@ -245,7 +245,6 @@ struct ContentView: View {
     @State private var greenFlashGeneration = 0
     @AppStorage("lightsSize") private var size: LightsSize = .large
     @AppStorage("lightsLayout") private var layout: LightsLayout = .vertical
-    @AppStorage("statusBarBackground") private var background: StatusBarBackground = .black
     @AppStorage("greenLightAlert") private var greenAlert: GreenLightAlert = .five
     @AppStorage("greenAlertSpeed") private var alertSpeed: GreenAlertSpeed = .slow
 
@@ -295,18 +294,6 @@ struct ContentView: View {
                         HStack {
                             Text(opt.label)
                             if layout == opt { Spacer(); Image(systemName: "checkmark") }
-                        }
-                    }
-                }
-            }
-            Menu("Background") {
-                ForEach(StatusBarBackground.allCases, id: \.rawValue) { opt in
-                    Button {
-                        background = opt
-                    } label: {
-                        HStack {
-                            Text(opt.label)
-                            if background == opt { Spacer(); Image(systemName: "checkmark") }
                         }
                     }
                 }
@@ -403,36 +390,30 @@ struct ContentView: View {
     }
 
     private var housing: some View {
-        Group {
-            if background == .black {
-                ZStack {
-                    RoundedRectangle(cornerRadius: size.corner, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.18, green: 0.18, blue: 0.20),
-                                    Color(red: 0.07, green: 0.07, blue: 0.09)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                    RoundedRectangle(cornerRadius: size.corner, style: .continuous)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.20),
-                                    Color.white.opacity(0.03)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: 1
-                        )
-                }
-            } else {
-                Color.clear
-            }
+        ZStack {
+            RoundedRectangle(cornerRadius: size.corner, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.18, green: 0.18, blue: 0.20),
+                            Color(red: 0.07, green: 0.07, blue: 0.09)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+            RoundedRectangle(cornerRadius: size.corner, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.20),
+                            Color.white.opacity(0.03)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
         }
     }
 
