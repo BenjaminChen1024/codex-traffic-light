@@ -266,6 +266,17 @@ struct ContentView: View {
         .background(housing)
         .padding(size.glowInset)
         .contextMenu {
+            Toggle("Show Light", isOn: Binding(
+                get: { UserDefaults.standard.object(forKey: "lightsFloatingVisible") as? Bool ?? true },
+                set: { visible in
+                    UserDefaults.standard.set(visible, forKey: "lightsFloatingVisible")
+                    NotificationCenter.default.post(
+                        name: .lightsSetDisplayMode, object: nil,
+                        userInfo: ["visible": visible]
+                    )
+                }
+            ))
+            Divider()
             Menu("Size") {
                 ForEach(LightsSize.allCases) { opt in
                     Button {
@@ -327,16 +338,6 @@ struct ContentView: View {
                     }
                 }
             }
-            Toggle("Show Floating Light", isOn: Binding(
-                get: { UserDefaults.standard.object(forKey: "lightsFloatingVisible") as? Bool ?? true },
-                set: { visible in
-                    UserDefaults.standard.set(visible, forKey: "lightsFloatingVisible")
-                    NotificationCenter.default.post(
-                        name: .lightsSetDisplayMode, object: nil,
-                        userInfo: ["visible": visible]
-                    )
-                }
-            ))
             Divider()
             Button("Setup Hooks…") {
                 NotificationCenter.default.post(name: .lightsShowSetup, object: nil)

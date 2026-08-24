@@ -76,11 +76,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private func rebuild(menu: NSMenu) {
         menu.removeAllItems()
 
-        let floatingItem = item("Show Floating Light", #selector(actionToggleFloating))
+        let floatingItem = item("Show Light", #selector(actionToggleFloating))
         floatingItem.state = isFloatingVisible ? .on : .off
         menu.addItem(floatingItem)
-        menu.addItem(.separator())
-        menu.addItem(item("Setup Hooks…", #selector(actionShowSetup)))
         menu.addItem(.separator())
 
         let sizeItem = NSMenuItem(title: "Size", action: nil, keyEquivalent: "")
@@ -153,6 +151,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         alertItem.submenu = alertMenu
         menu.addItem(alertItem)
 
+        menu.addItem(.separator())
+        menu.addItem(item("Setup Hooks…", #selector(actionShowSetup)))
         menu.addItem(.separator())
         menu.addItem(item("Quit Lights", #selector(actionQuit), key: "q"))
     }
