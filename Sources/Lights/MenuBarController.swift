@@ -174,23 +174,24 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     static func renderStatusIcon(state: LightsState, layout: LightsLayout) -> NSImage {
-        let size = layout == .vertical ? NSSize(width: 16, height: 22) : NSSize(width: 30, height: 14)
+        let size = layout == .vertical ? NSSize(width: 16, height: 22) : NSSize(width: 27, height: 9)
         let img = NSImage(size: size)
         img.lockFocus()
         let ctx = NSGraphicsContext.current!.cgContext
         ctx.setShouldAntialias(true)
         ctx.interpolationQuality = .high
 
-        let housing = layout == .vertical
-            ? CGRect(x: 1, y: 0.5, width: 14, height: 21)
-            : CGRect(x: 0.5, y: 1, width: 29, height: 12)
-        let housingPath = CGPath(roundedRect: housing, cornerWidth: 4, cornerHeight: 4, transform: nil)
-        ctx.addPath(housingPath)
-        ctx.fillPath()
-        ctx.setStrokeColor(NSColor(calibratedWhite: 0.75, alpha: 0.22).cgColor)
-        ctx.setLineWidth(0.7)
-        ctx.addPath(housingPath)
-        ctx.strokePath()
+        if layout == .vertical {
+            let housing = CGRect(x: 1, y: 0.5, width: 14, height: 21)
+            let housingPath = CGPath(roundedRect: housing, cornerWidth: 4, cornerHeight: 4, transform: nil)
+            ctx.setFillColor(NSColor(calibratedWhite: 0.10, alpha: 1).cgColor)
+            ctx.addPath(housingPath)
+            ctx.fillPath()
+            ctx.setStrokeColor(NSColor(calibratedWhite: 0.75, alpha: 0.22).cgColor)
+            ctx.setLineWidth(0.7)
+            ctx.addPath(housingPath)
+            ctx.strokePath()
+        }
 
         let dotD: CGFloat = 4.4
         let spacing: CGFloat = 1.65
@@ -209,7 +210,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
                 x = (size.width - dotD) / 2
                 y = size.height - 3.5 - dotD - CGFloat(i) * (dotD + spacing)
             } else {
-                x = 3.6 + CGFloat(i) * (dotD + spacing)
+                x = 1.0 + CGFloat(i) * (dotD + spacing)
                 y = (size.height - dotD) / 2
             }
             if isActive {
