@@ -22,17 +22,19 @@ enum LightsSize: String, CaseIterable, Identifiable {
     var socket: CGFloat { bulb + 8 }
     var glowOuter: CGFloat { bulb * 0.5 }
     var glowFar:   CGFloat { bulb * 1.0 }
+    /// Transparent room outside the housing so the outer light glow can fade naturally.
+    var glowInset: CGFloat { glowFar + 2 }
     var highlightInset: CGFloat { bulb / 18 + 1 }
     var label: String { switch self { case .small: "Small"; case .medium: "Medium"; case .large: "Large"; case .extraLarge: "Extra Large"; case .huge: "Huge" } }
 
     func windowSize(for layout: LightsLayout) -> NSSize {
         switch layout {
         case .vertical:
-            NSSize(width: socket + 2 * padding,
-                   height: 3 * socket + 2 * spacing + 2 * padding)
+            NSSize(width: socket + 2 * padding + 2 * glowInset,
+                   height: 3 * socket + 2 * spacing + 2 * padding + 2 * glowInset)
         case .horizontal:
-            NSSize(width: 3 * socket + 2 * spacing + 2 * padding,
-                   height: socket + 2 * padding)
+            NSSize(width: 3 * socket + 2 * spacing + 2 * padding + 2 * glowInset,
+                   height: socket + 2 * padding + 2 * glowInset)
         }
     }
 }
@@ -262,6 +264,7 @@ struct ContentView: View {
         }
         .padding(size.padding)
         .background(housing)
+        .padding(size.glowInset)
         .contextMenu {
             Menu("Size") {
                 ForEach(LightsSize.allCases) { opt in
