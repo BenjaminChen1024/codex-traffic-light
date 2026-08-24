@@ -5,6 +5,12 @@ enum StatusBarBackground: String, CaseIterable {
     var label: String { self == .black ? "Black" : "Transparent" }
 }
 
+enum GreenLightAlert: String, CaseIterable {
+    case never, once, three, five, ten
+    var count: Int { switch self { case .never: 0; case .once: 1; case .three: 3; case .five: 5; case .ten: 10 } }
+    var label: String { switch self { case .never: "Never"; case .once: "Flash Once"; case .three: "Flash 3 Times"; case .five: "Flash 5 Times"; case .ten: "Flash 10 Times" } }
+}
+
 extension Notification.Name {
     static let lightsShowSetup    = Notification.Name("LightsShowSetup")
     static let lightsRequestOff   = Notification.Name("LightsRequestOff")
@@ -21,7 +27,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let btn = item.button {
-            btn.image = Self.renderStatusIcon(state: currentState, layout: currentLayout, background: currentBackground)
+            btn.image = Self.renderStatusIcon(state: currentState, layout: currentLayout, size: currentSize, background: currentBackground)
             btn.imagePosition = .imageOnly
             btn.imageScaling = .scaleProportionallyDown
         }
@@ -111,6 +117,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         backgroundItem.submenu = backgroundMenu
         menu.addItem(backgroundItem)
 
+        let alertItem = NSMenuItem(title: "Green Light Alert", action: nil, keyEquivalent: "")
+        let alertMenu = NSMenu()
+        for opt in GreenLightAlert.allCases {
+            let m = NSMenuItem(title: opt.label, action: #selector(actionSetGreenAlert(_:)), keyEquivalent: "")
+            m.target = self
+            m.representedObject = opt.rawValue
+            m.state = opt == currentGreenAlert ? .on : .off
+            alertMenu.addItem(m)
+        }
+        alertItem.submenu = alertMenu
+        menu.addItem(alertItem)
+
         menu.addItem(.separator())
         menu.addItem(item("Quit Lights", #selector(actionQuit), key: "q"))
     }
@@ -156,8 +174,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
               let background = StatusBarBackground(rawValue: raw) else { return }
         UserDefaults.standard.set(background.rawValue, forKey: "statusBarBackground")
         statusItem?.button?.image = Self.renderStatusIcon(
-            state: currentState, layout: currentLayout, background: background
+            state: currentState, layout: currentLayout, size: currentSize, background: background
         )
+    }
+
+    @objc private func actionSetGreenAlert(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let alert = GreenLightAlert(rawValue: raw) else { return }
+        UserDefaults.standard.set(alert.rawValue, forKey: "greenLightAlert")
     }
 
     @objc private func handleStateChange(_ note: Notification) {
@@ -166,13 +190,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         currentState = state
         if state != .idle { greenFlashGeneration += 1 }
         statusItem?.button?.image = Self.renderStatusIcon(
-            state: state, layout: currentLayout, background: currentBackground
+            state: state, layout: currentLayout, size: currentSize, background: currentBackground
         )
     }
 
     @objc private func handleLayoutChange(_ note: Notification) {
         statusItem?.button?.image = Self.renderStatusIcon(
-            state: currentState, layout: currentLayout, background: currentBackground
+            state: currentState, layout: currentLayout, size: currentSize, background: currentBackground
         )
     }
 
@@ -182,7 +206,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let generation = greenFlashGeneration
         Task { @MainActor [weak self] in
             guard let self else { return }
-            for _ in 0..<5 {
+            for _ in 0..<self.currentGreenAlert.count {
                 guard generation == self.greenFlashGeneration else { return }
                 self.renderStatus(.off)
                 try? await Task.sleep(nanoseconds: 160_000_000)
@@ -195,7 +219,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     private func renderStatus(_ state: LightsState) {
         statusItem?.button?.image = Self.renderStatusIcon(
-            state: state, layout: currentLayout, background: currentBackground
+            state: state, layout: currentLayout, size: currentSize, background: currentBackground
         )
     }
 
@@ -209,8 +233,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         LightsLayout(rawValue: UserDefaults.standard.string(forKey: "lightsLayout") ?? "") ?? .vertical
     }
 
+    private var currentSize: LightsSize {
+        LightsSize(rawValue: UserDefaults.standard.string(forKey: "lightsSize") ?? "") ?? .large
+    }
+
     private var currentBackground: StatusBarBackground {
         StatusBarBackground(rawValue: UserDefaults.standard.string(forKey: "statusBarBackground") ?? "") ?? .black
+    }
+
+    private var currentGreenAlert: GreenLightAlert {
+        GreenLightAlert(rawValue: UserDefaults.standard.string(forKey: "greenLightAlert") ?? "") ?? .five
     }
 
     private var isFloatingVisible: Bool {
@@ -220,18 +252,22 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         return UserDefaults.standard.string(forKey: "lightsDisplayMode") != "menuBar"
     }
 
-    static func renderStatusIcon(state: LightsState, layout: LightsLayout, background: StatusBarBackground) -> NSImage {
-        let size = layout == .vertical ? NSSize(width: 16, height: 22) : NSSize(width: 27, height: 12)
-        let img = NSImage(size: size)
+    static func renderStatusIcon(state: LightsState, layout: LightsLayout, size selectedSize: LightsSize, background: StatusBarBackground) -> NSImage {
+        let scale = min(selectedSize.bulb / LightsSize.large.bulb, 1)
+        let dotD: CGFloat = 4.4 * scale
+        let spacing: CGFloat = 1.65 * scale
+        let pad: CGFloat = 3.5 * scale
+        let iconSize = layout == .vertical
+            ? NSSize(width: dotD + 2 * pad, height: 3 * dotD + 2 * spacing + 2 * pad)
+            : NSSize(width: 3 * dotD + 2 * spacing + 2 * pad, height: dotD + 2 * pad)
+        let img = NSImage(size: iconSize)
         img.lockFocus()
         let ctx = NSGraphicsContext.current!.cgContext
         ctx.setShouldAntialias(true)
         ctx.interpolationQuality = .high
 
         if background == .black {
-            let housing = layout == .vertical
-                ? CGRect(x: 1, y: 0.5, width: 14, height: 21)
-                : CGRect(x: 0.5, y: 0.5, width: 26, height: 11)
+            let housing = CGRect(origin: .zero, size: iconSize)
             let housingPath = CGPath(roundedRect: housing, cornerWidth: 4, cornerHeight: 4, transform: nil)
             ctx.setFillColor(NSColor(calibratedWhite: 0.10, alpha: 1).cgColor)
             ctx.addPath(housingPath)
@@ -242,8 +278,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             ctx.strokePath()
         }
 
-        let dotD: CGFloat = 4.4
-        let spacing: CGFloat = 1.65
         let colors: [NSColor] = [.systemRed, .systemYellow, .systemGreen]
         let activeIndex: Int? = switch state {
         case .executing: 0
@@ -256,12 +290,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             let x: CGFloat
             let y: CGFloat
             if layout == .vertical {
-                x = (size.width - dotD) / 2
-                y = size.height - 3.5 - dotD - CGFloat(i) * (dotD + spacing)
+                x = (iconSize.width - dotD) / 2
+                y = iconSize.height - pad - dotD - CGFloat(i) * (dotD + spacing)
             } else {
                 let totalWidth = 3 * dotD + 2 * spacing
-                x = (size.width - totalWidth) / 2 + CGFloat(i) * (dotD + spacing)
-                y = (size.height - dotD) / 2
+                x = (iconSize.width - totalWidth) / 2 + CGFloat(i) * (dotD + spacing)
+                y = (iconSize.height - dotD) / 2
             }
             if isActive {
                 ctx.setShadow(offset: .zero, blur: 2.2,
