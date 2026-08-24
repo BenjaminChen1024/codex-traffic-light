@@ -21,6 +21,7 @@
 - 保留窗口拖动，可自由放置在屏幕任意位置。
 - 新增横向与纵向布局：横向固定为红、黄、绿从左到右。
 - 扩展尺寸档位：Small、Medium、Large、Extra Large、Huge。
+- 支持显示位置切换：可在桌面悬浮交通灯与 macOS 菜单栏状态灯之间选择；菜单栏模式下仅保留一枚随状态变化的三色小灯。
 - 使用本机状态接口，状态更新不依赖外部服务。
 
 ## 使用方式
@@ -30,6 +31,7 @@
 3. 在右键菜单或菜单栏菜单中选择：
    - `Size`：调整交通灯大小；
    - `Layout`：选择 Vertical 或 Horizontal；
+   - `Display Location`：选择 Desktop Floating 或 Menu Bar；
    - `Setup Hooks…`：查看或配置 Hook 集成。
 
 可将 Lights 加入 macOS 的“登录项与扩展”，使其开机自动启动。

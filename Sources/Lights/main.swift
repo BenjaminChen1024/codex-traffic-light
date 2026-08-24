@@ -11,6 +11,12 @@ enum LightsLayout: String, CaseIterable, Identifiable {
     var label: String { self == .vertical ? "Vertical" : "Horizontal" }
 }
 
+enum LightsDisplayMode: String, CaseIterable, Identifiable {
+    case floating, menuBar
+    var id: String { rawValue }
+    var label: String { self == .floating ? "Desktop Floating" : "Menu Bar" }
+}
+
 enum LightsSize: String, CaseIterable, Identifiable {
     case small, medium, large, extraLarge, huge
     var id: String { rawValue }
@@ -92,6 +98,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let initialSize = LightsSize(rawValue: storedRaw) ?? .large
         let storedLayout = UserDefaults.standard.string(forKey: "lightsLayout") ?? LightsLayout.vertical.rawValue
         let initialLayout = LightsLayout(rawValue: storedLayout) ?? .vertical
+        let storedDisplayMode = UserDefaults.standard.string(forKey: "lightsDisplayMode") ?? LightsDisplayMode.floating.rawValue
+        let initialDisplayMode = LightsDisplayMode(rawValue: storedDisplayMode) ?? .floating
         let size = initialSize.windowSize(for: initialLayout)
         // NSScreen.main can be nil for LSUIElement apps at launch (no key window).
         // Fall back to the first screen in the list (system primary).
@@ -116,10 +124,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         win.hasShadow = true
         win.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         win.contentView = NSHostingView(rootView: ContentView())
-        win.makeKeyAndOrderFront(nil)
+        if initialDisplayMode == .floating {
+            win.makeKeyAndOrderFront(nil)
+        } else {
+            win.orderOut(nil)
+        }
 
         self.window = win
-        NSApp.activate(ignoringOtherApps: true)
+        if initialDisplayMode == .floating {
+            NSApp.activate(ignoringOtherApps: true)
+        }
 
         NotificationCenter.default.addObserver(
             forName: .lightsResize, object: nil, queue: .main
@@ -136,6 +150,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         ) { [weak self] _ in
             self?.showSetupPanel()
         }
+        NotificationCenter.default.addObserver(
+            forName: .lightsSetDisplayMode, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let raw = note.userInfo?["raw"] as? String,
+                  let mode = LightsDisplayMode(rawValue: raw) else { return }
+            self?.applyDisplayMode(mode)
+        }
 
         // First-launch: auto-open Setup
         if !SetupManager.hasSeenSetup {
@@ -148,6 +169,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func toggleWindowVisibility() {
         guard let win = window else { return }
         if win.isVisible {
+            win.orderOut(nil)
+        } else {
+            win.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    private func applyDisplayMode(_ mode: LightsDisplayMode) {
+        guard let win = window else { return }
+        if mode == .menuBar {
             win.orderOut(nil)
         } else {
             win.makeKeyAndOrderFront(nil)
@@ -268,6 +299,24 @@ struct ContentView: View {
                         HStack {
                             Text(opt.label)
                             if layout == opt { Spacer(); Image(systemName: "checkmark") }
+                        }
+                    }
+                }
+            }
+            Menu("Display Location") {
+                ForEach(LightsDisplayMode.allCases) { opt in
+                    Button {
+                        UserDefaults.standard.set(opt.rawValue, forKey: "lightsDisplayMode")
+                        NotificationCenter.default.post(
+                            name: .lightsSetDisplayMode, object: nil,
+                            userInfo: ["raw": opt.rawValue]
+                        )
+                    } label: {
+                        HStack {
+                            Text(opt.label)
+                            if (UserDefaults.standard.string(forKey: "lightsDisplayMode") ?? LightsDisplayMode.floating.rawValue) == opt.rawValue {
+                                Spacer(); Image(systemName: "checkmark")
+                            }
                         }
                     }
                 }
