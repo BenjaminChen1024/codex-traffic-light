@@ -1,5 +1,10 @@
 import AppKit
 
+enum StatusBarBackground: String, CaseIterable {
+    case black, transparent
+    var label: String { self == .black ? "Black" : "Transparent" }
+}
+
 extension Notification.Name {
     static let lightsShowSetup    = Notification.Name("LightsShowSetup")
     static let lightsRequestOff   = Notification.Name("LightsRequestOff")
@@ -15,7 +20,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let btn = item.button {
-            btn.image = Self.renderStatusIcon(state: currentState, layout: currentLayout)
+            btn.image = Self.renderStatusIcon(state: currentState, layout: currentLayout, background: currentBackground)
             btn.imagePosition = .imageOnly
             btn.imageScaling = .scaleProportionallyDown
         }
@@ -87,6 +92,20 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         layoutItem.submenu = layoutMenu
         menu.addItem(layoutItem)
 
+        let backgroundItem = NSMenuItem(title: "Status Bar Background", action: nil, keyEquivalent: "")
+        let backgroundMenu = NSMenu()
+        for opt in StatusBarBackground.allCases {
+            let m = NSMenuItem(title: opt.label,
+                               action: #selector(actionSetBackground(_:)),
+                               keyEquivalent: "")
+            m.target = self
+            m.representedObject = opt.rawValue
+            m.state = opt == currentBackground ? .on : .off
+            backgroundMenu.addItem(m)
+        }
+        backgroundItem.submenu = backgroundMenu
+        menu.addItem(backgroundItem)
+
         menu.addItem(.separator())
         menu.addItem(item("Quit Lights", #selector(actionQuit), key: "q"))
     }
@@ -127,15 +146,28 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         )
     }
 
+    @objc private func actionSetBackground(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let background = StatusBarBackground(rawValue: raw) else { return }
+        UserDefaults.standard.set(background.rawValue, forKey: "statusBarBackground")
+        statusItem?.button?.image = Self.renderStatusIcon(
+            state: currentState, layout: currentLayout, background: background
+        )
+    }
+
     @objc private func handleStateChange(_ note: Notification) {
         guard let raw = note.userInfo?["state"] as? String,
               let state = LightsState(rawValue: raw) else { return }
         currentState = state
-        statusItem?.button?.image = Self.renderStatusIcon(state: state, layout: currentLayout)
+        statusItem?.button?.image = Self.renderStatusIcon(
+            state: state, layout: currentLayout, background: currentBackground
+        )
     }
 
     @objc private func handleLayoutChange(_ note: Notification) {
-        statusItem?.button?.image = Self.renderStatusIcon(state: currentState, layout: currentLayout)
+        statusItem?.button?.image = Self.renderStatusIcon(
+            state: currentState, layout: currentLayout, background: currentBackground
+        )
     }
 
     @objc private func actionQuit() {
@@ -148,6 +180,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         LightsLayout(rawValue: UserDefaults.standard.string(forKey: "lightsLayout") ?? "") ?? .vertical
     }
 
+    private var currentBackground: StatusBarBackground {
+        StatusBarBackground(rawValue: UserDefaults.standard.string(forKey: "statusBarBackground") ?? "") ?? .black
+    }
+
     private var isFloatingVisible: Bool {
         if let visible = UserDefaults.standard.object(forKey: "lightsFloatingVisible") as? Bool {
             return visible
@@ -155,16 +191,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         return UserDefaults.standard.string(forKey: "lightsDisplayMode") != "menuBar"
     }
 
-    static func renderStatusIcon(state: LightsState, layout: LightsLayout) -> NSImage {
-        let size = layout == .vertical ? NSSize(width: 16, height: 22) : NSSize(width: 27, height: 9)
+    static func renderStatusIcon(state: LightsState, layout: LightsLayout, background: StatusBarBackground) -> NSImage {
+        let size = layout == .vertical ? NSSize(width: 16, height: 22) : NSSize(width: 27, height: 12)
         let img = NSImage(size: size)
         img.lockFocus()
         let ctx = NSGraphicsContext.current!.cgContext
         ctx.setShouldAntialias(true)
         ctx.interpolationQuality = .high
 
-        if layout == .vertical {
-            let housing = CGRect(x: 1, y: 0.5, width: 14, height: 21)
+        if background == .black {
+            let housing = layout == .vertical
+                ? CGRect(x: 1, y: 0.5, width: 14, height: 21)
+                : CGRect(x: 0.5, y: 0.5, width: 26, height: 11)
             let housingPath = CGPath(roundedRect: housing, cornerWidth: 4, cornerHeight: 4, transform: nil)
             ctx.setFillColor(NSColor(calibratedWhite: 0.10, alpha: 1).cgColor)
             ctx.addPath(housingPath)
