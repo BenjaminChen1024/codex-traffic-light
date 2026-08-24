@@ -87,7 +87,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         layoutItem.submenu = layoutMenu
         menu.addItem(layoutItem)
 
-        menu.addItem(item("Turn Lights Off", #selector(actionOff)))
         menu.addItem(.separator())
         menu.addItem(item("Quit Lights", #selector(actionQuit), key: "q"))
     }
@@ -137,10 +136,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func handleLayoutChange(_ note: Notification) {
         statusItem?.button?.image = Self.renderStatusIcon(state: currentState, layout: currentLayout)
-    }
-
-    @objc private func actionOff() {
-        NotificationCenter.default.post(name: .lightsRequestOff, object: nil)
     }
 
     @objc private func actionQuit() {

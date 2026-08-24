@@ -297,8 +297,6 @@ struct ContentView: View {
                 NotificationCenter.default.post(name: .lightsShowSetup, object: nil)
             }
             Divider()
-            Button("Off") { setActive(nil) }
-            Divider()
             Button("Quit Lights") { NSApp.terminate(nil) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .lightsStateChange)) { note in
