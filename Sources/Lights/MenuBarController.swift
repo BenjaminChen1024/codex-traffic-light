@@ -338,11 +338,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     private var currentGreenAlert: GreenLightAlert {
-        GreenLightAlert(rawValue: UserDefaults.standard.string(forKey: "greenLightAlert") ?? "") ?? .five
+        GreenLightAlert(rawValue: UserDefaults.standard.string(forKey: "greenLightAlert") ?? "") ?? .three
     }
 
     private var currentAlertSpeed: GreenAlertSpeed {
-        GreenAlertSpeed(rawValue: UserDefaults.standard.string(forKey: "greenAlertSpeed") ?? "") ?? .seconds16
+        GreenAlertSpeed(rawValue: UserDefaults.standard.string(forKey: "greenAlertSpeed") ?? "") ?? .seconds08
     }
 
     private var isFloatingVisible: Bool {

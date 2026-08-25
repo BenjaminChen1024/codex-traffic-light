@@ -248,8 +248,8 @@ struct ContentView: View {
     @AppStorage("lightsLayout") private var layout: LightsLayout = .vertical
     @AppStorage("statusBarSize") private var statusBarSize: LightsSize = .large
     @AppStorage("statusBarBackground") private var statusBarBackground: StatusBarBackground = .black
-    @AppStorage("greenLightAlert") private var greenAlert: GreenLightAlert = .five
-    @AppStorage("greenAlertSpeed") private var alertSpeed: GreenAlertSpeed = .seconds16
+    @AppStorage("greenLightAlert") private var greenAlert: GreenLightAlert = .three
+    @AppStorage("greenAlertSpeed") private var alertSpeed: GreenAlertSpeed = .seconds08
     @AppStorage("appLanguage") private var appLanguage: AppLanguage = .english
     @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
 
