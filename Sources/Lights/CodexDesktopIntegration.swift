@@ -4,7 +4,7 @@ import Foundation
 /// depend on the `codex` shell command being installed or present in PATH.
 final class CodexDesktopIntegration: ToolIntegration {
     let id = "codex-desktop"
-    let displayName = "Codex Desktop"
+    let displayName = "ChatGPT Desktop"
     let supportLevel: SupportLevel = .events
 
     private var hooksPath: String { "\(NSHomeDirectory())/.codex/hooks.json" }
