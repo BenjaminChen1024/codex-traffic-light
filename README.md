@@ -53,7 +53,13 @@ swift build -c release --arch arm64
 open Lights.app
 ```
 
-`build-app.sh` creates `Lights.app`. Use `release-app.sh` and `notarize.sh` for release signing or notarization.
+`build-app.sh` creates `Lights.app`. To create a drag-to-install DMG for others, run:
+
+```bash
+./package-dmg.sh
+```
+
+The resulting `dist/Codex-Traffic-Light-v<version>.dmg` contains `Lights.app` and an Applications shortcut. Users can drag the app into Applications; they do not need Xcode. Use `release-app.sh` and `notarize.sh` for Developer ID signing or notarization.
 
 ## Credits and license
 

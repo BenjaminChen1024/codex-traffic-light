@@ -53,7 +53,13 @@ swift build -c release --arch arm64
 open Lights.app
 ```
 
-`build-app.sh` 会生成 `Lights.app`。如需发布签名或公证，可使用仓库中的 `release-app.sh` 与 `notarize.sh`。
+`build-app.sh` 会生成 `Lights.app`。如需制作供他人拖拽安装的 DMG，运行：
+
+```bash
+./package-dmg.sh
+```
+
+生成的 `dist/Codex-Traffic-Light-v<版本号>.dmg` 内含 `Lights.app` 和“应用程序”快捷方式。用户只需将 App 拖入“应用程序”，无需安装 Xcode。如需正式发布签名或公证，可使用仓库中的 `release-app.sh` 与 `notarize.sh`。
 
 ## 致谢与许可
 
